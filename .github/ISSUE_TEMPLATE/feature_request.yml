@@ -1,0 +1,20 @@
+---
+name: Feature Request
+description: Suggest an enhancement or feature for DungeonMind
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Feature Description
+      description: Explain the proposed feature or reinforcement learning improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Why would this be useful?
+      description: How does this improve agent behavior or game visualization?
+    validations:
+      required: false

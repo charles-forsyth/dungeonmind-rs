@@ -1,0 +1,31 @@
+---
+name: Bug Report
+description: File a bug report for DungeonMind
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for filing a bug report for DungeonMind!
+  - type: input
+    id: environment
+    attributes:
+      label: OS & Hardware
+      description: e.g. Windows 11 ARM64 / Ubuntu 24.04 x86_64
+      placeholder: Windows 11 x64
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Steps to trigger the issue, including seed and episode if relevant.
+    validations:
+      required: true

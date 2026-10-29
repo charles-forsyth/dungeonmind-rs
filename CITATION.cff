@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Forsyth
+    given-names: Charles E. III
+    orcid: "https://orcid.org/0000-0003-4872-0296"
+    affiliation: "University of California, Riverside"
+title: "DungeonMind: Self-Learning Q-Learning Roguelike"
+version: 0.1.0
+date-released: "2026-10-29"
+license: MIT
+repository-code: "https://github.com/charles-forsyth/dungeonmind-rs"
+url: "https://charles-forsyth.github.io/dungeonmind-rs/"
+keywords:
+  - rust
+  - reinforcement-learning
+  - q-learning
+  - roguelike
+  - macroquad
+  - miniquad
+  - machine-learning-game

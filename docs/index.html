@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DungeonMind (Rust) — A Hero That Learns</title>
+  <meta name="description" content="A self-learning, self-playing roguelike dungeon crawler powered by tabular Q-learning in Rust and Macroquad.">
+  <link rel="icon" type="image/png" href="screenshots/dungeonmind_main.png">
+  <style>
+    :root {
+      --bg: #0d0e15;
+      --bg-panel: #161822;
+      --border: #2e3448;
+      --gold: #f59e0b;
+      --gold-bright: #fbbf24;
+      --gold-glow: rgba(245, 158, 11, 0.3);
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --code-bg: #090a0f;
+      --font-pixel: "Courier New", Courier, monospace;
+      --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 10% 40%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.05) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      background: rgba(13, 14, 21, 0.85);
+      border-bottom: 2px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .torch-icon {
+      font-size: 1.4rem;
+      animation: flicker 2.5s infinite alternate;
+    }
+    @keyframes flicker {
+      0%, 100% { filter: drop-shadow(0 0 8px #f59e0b); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 14px #fbbf24); transform: scale(1.08); }
+    }
+
+    .brand-title {
+      font-family: var(--font-pixel);
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--gold-bright);
+      text-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    nav { display: flex; gap: 1.5rem; align-items: center; }
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    nav a:hover { color: var(--gold-bright); }
+
+    .btn-gh {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #1f2434;
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .btn-gh:hover {
+      background: #2b3248;
+      border-color: var(--gold);
+    }
+
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem 3rem;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-family: var(--font-pixel);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold-bright);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 0.3rem 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.3rem, 5.5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      color: #fff;
+    }
+    .hero h1 span {
+      color: var(--gold-bright);
+      text-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    .hero p {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .cta-group {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      color: #000;
+      font-weight: 700;
+      padding: 0.85rem 1.8rem;
+      border-radius: 6px;
+      text-decoration: none;
+      box-shadow: 0 4px 20px var(--gold-glow);
+      transition: all 0.2s;
+    }
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(245, 158, 11, 0.5);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-weight: 600;
+      padding: 0.85rem 1.8rem;
+      border-radius: 6px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    .btn-outline:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--gold); }
+
+    /* Showcase frame */
+    .showcase-box {
+      max-width: 1050px;
+      margin: 0 auto 5rem;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    .box-header {
+      background: #11131c;
+      border-bottom: 2px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: var(--font-pixel);
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold-bright);
+      border-color: var(--gold);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+
+    .box-img-wrap {
+      background: #000;
+      position: relative;
+    }
+    .box-img-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: opacity 0.3s;
+    }
+
+    /* Sections */
+    .section {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .section-title {
+      font-size: 2.1rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.75rem;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      font-size: 1.2rem;
+      color: var(--gold-bright);
+      margin-bottom: 0.5rem;
+    }
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    /* Web notice banner */
+    .banner {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 3.5rem;
+      text-align: center;
+    }
+    .banner a { color: #a5b4fc; text-decoration: underline; font-weight: 600; }
+
+    /* Download card */
+    .download-card {
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 2.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .dl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .dl-btn {
+      background: #11131c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .dl-btn:hover {
+      border-color: var(--gold);
+      background: #1a1e2d;
+      transform: translateY(-2px);
+    }
+    .dl-name { font-weight: 700; color: var(--gold-bright); font-size: 1.1rem; }
+    .dl-info { font-size: 0.85rem; color: var(--text-muted); }
+
+    .smartscreen {
+      margin-top: 2rem;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 6px;
+      padding: 1.25rem;
+      font-size: 0.92rem;
+      color: #fbbf24;
+      line-height: 1.6;
+    }
+    .smartscreen strong { color: #fef3c7; }
+
+    /* Cite Box */
+    .cite-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      font-family: var(--font-pixel);
+      font-size: 0.88rem;
+      color: #d1d5db;
+      overflow-x: auto;
+      white-space: pre;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+    footer {
+      border-top: 2px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--gold-bright); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="#" class="brand">
+      <span class="torch-icon">🔥</span>
+      <span class="brand-title">DungeonMind</span>
+    </a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#showcase">Showcase</a>
+      <a href="#download">Download</a>
+      <a href="#cite">Cite</a>
+      <a href="https://github.com/charles-forsyth/dungeonmind-rs" class="btn-gh" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-badge">Reinforcement Learning · Rust · Macroquad</div>
+      <h1>A Hero That <span>Learns</span></h1>
+      <p>A self-playing, self-learning roguelike dungeon crawler. The hero is powered by tabular Q-learning: watch it navigate deadly procedural rooms, evaluate action vectors, and become measurably smarter episode after episode.</p>
+
+      <div class="banner">
+        Looking for the original web version? See <a href="https://github.com/charles-forsyth/DungeonMind" target="_blank" rel="noopener">charles-forsyth/DungeonMind</a>. This repository is the native desktop Rust edition with multi-threaded training and Mesa OpenGL fallback.
+      </div>
+
+      <div class="cta-group">
+        <a href="#download" class="btn-gold">Download Release v0.1.0</a>
+        <a href="https://github.com/charles-forsyth/dungeonmind-rs" class="btn-outline" target="_blank" rel="noopener">View Source</a>
+      </div>
+
+      <div class="showcase-box" id="showcase">
+        <div class="box-header">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('main')">AI Thoughts Overlay</button>
+            <button class="tab-btn" onclick="switchTab('combat')">Combat & Dice Rolls</button>
+            <button class="tab-btn" onclick="switchTab('dice')">Mimic Encounter</button>
+            <button class="tab-btn" onclick="switchTab('recap')">Episode Recap</button>
+            <button class="tab-btn" onclick="switchTab('hint')">Tactical Decisions</button>
+            <button class="tab-btn" onclick="switchTab('final')">Floor Progression</button>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--gold-bright); font-family: var(--font-pixel);">WATCH MODE: ACTIVE</span>
+        </div>
+        <div class="box-img-wrap">
+          <img id="shot-img" src="screenshots/dungeonmind_main.png" alt="DungeonMind Gameplay Screenshot">
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <h2 class="section-title">The Mind of the Hero</h2>
+      <p class="section-subtitle">Real-time telemetry peering directly into the agent's decision-making process.</p>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon">🧠</div>
+          <h3>Tabular Q-Learning</h3>
+          <p>Full &epsilon;-greedy reinforcement learning with geometric decay. The state encodes surroundings, monster distance/direction buckets, HP, inventory keys, and stair proximity.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">👁️</div>
+          <h3>Concurrent Watch Mode</h3>
+          <p>Training runs full speed in the background (50–100+ episodes/sec) while periodically streaming immutable policy snapshots to the 60 FPS showcase frontend.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">💬</div>
+          <h3>Thought Overlays</h3>
+          <p>Watch real-time thought bubbles above the hero displaying chosen actions, estimated Q-values, and strategic rationale (<em>"monster close: retreating"</em>, <em>"heading for stairs"</em>).</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🗺️</div>
+          <h3>8 Procedural Floors</h3>
+          <p>120&times;80 dungeon levels with torchlit corridors, locked doors with provably reachable keys, traps, healing shrines, and 13 D&D monster archetypes with d20 dice rolls.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h3>Live Telemetry Panels</h3>
+          <p>Exposes real-time reward curves, moving averages, deepest floor reached, exploration decay, and a 13-action utility bar chart comparing discrete candidate actions.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <h3>Portable & VM-Ready</h3>
+          <p>Shipped with Mesa llvmpipe software OpenGL fallback (`opengl32.dll`) so the game runs seamlessly even inside GPU-less virtual machines or cloud sandboxes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="download">
+      <div class="download-card">
+        <h2 style="font-size: 1.8rem; color: var(--gold-bright); margin-bottom: 0.5rem;">Download DungeonMind v0.1.0</h2>
+        <p style="color: var(--text-muted);">Portable Windows binaries for ARM64 and x64 architectures.</p>
+
+        <div class="dl-grid">
+          <a href="https://github.com/charles-forsyth/dungeonmind-rs/releases/download/v0.1.0/DungeonMind-arm64.zip" class="dl-btn">
+            <span class="dl-name">DungeonMind-arm64.zip</span>
+            <span class="dl-info">Qualcomm Snapdragon X, Surface Pro ARM, and Windows ARM64 VMs</span>
+            <span style="font-size: 0.75rem; color: var(--gold-bright); font-family: var(--font-pixel);">SHA-256: d437a87b...</span>
+          </a>
+
+          <a href="https://github.com/charles-forsyth/dungeonmind-rs/releases/download/v0.1.0/DungeonMind-x64.zip" class="dl-btn">
+            <span class="dl-name">DungeonMind-x64.zip</span>
+            <span class="dl-info">Intel Core / Xeon and AMD Ryzen / EPYC 64-bit PCs</span>
+            <span style="font-size: 0.75rem; color: var(--gold-bright); font-family: var(--font-pixel);">SHA-256: 753a1f59...</span>
+          </a>
+        </div>
+
+        <div class="smartscreen">
+          <strong>Note on Windows SmartScreen:</strong> DungeonMind is an open-source project and is not signed with a commercial EV certificate. When opening `DungeonMind.exe` for the first time, Windows SmartScreen may show <em>"Windows protected your PC"</em>. Simply click <strong>More info</strong> and select <strong>Run anyway</strong>.
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="cite">
+      <h2 class="section-title">Citation</h2>
+      <p class="section-subtitle">If you cite DungeonMind in academic research or game AI studies, please use the following metadata:</p>
+
+      <div class="cite-box">
+        <button class="copy-btn" onclick="copyCite()">Copy</button>
+<span id="cite-text">@software{forsyth2026dungeonmind,
+  author       = {Forsyth, Charles E. III},
+  title        = {DungeonMind: Self-Learning Q-Learning Roguelike},
+  year         = {2026},
+  publisher    = {GitHub},
+  version      = {0.1.0},
+  url          = {https://github.com/charles-forsyth/dungeonmind-rs},
+  note         = {DOI: pending}
+}</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>DungeonMind is open-source software under the <a href="https://github.com/charles-forsyth/dungeonmind-rs/blob/main/LICENSE">MIT License</a>.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b7280;">Author: Charles Forsyth (ORCID: 0000-0003-4872-0296) · University of California, Riverside</p>
+  </footer>
+
+  <script>
+    const shots = {
+      'main': 'screenshots/dungeonmind_main.png',
+      'combat': 'screenshots/dungeonmind_combat.png',
+      'dice': 'screenshots/dungeonmind_dice.png',
+      'recap': 'screenshots/dungeonmind_recap.png',
+      'hint': 'screenshots/dungeonmind_hint.png',
+      'final': 'screenshots/dungeonmind_final.png'
+    };
+
+    function switchTab(key) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      const img = document.getElementById('shot-img');
+      img.style.opacity = 0.4;
+      setTimeout(() => {
+        img.src = shots[key];
+        img.style.opacity = 1.0;
+      }, 150);
+    }
+
+    function copyCite() {
+      const text = document.getElementById('cite-text').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy', 2000);
+      });
+    }
+  </script>
+</body>
+</html>

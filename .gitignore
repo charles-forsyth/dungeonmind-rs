@@ -1,0 +1,14 @@
+/target
+qa/*.png
+*.log
+qa/arm64/
+qa/x64/
+qa/ab/
+qa/*.7z
+*.err
+*.out
+train_*.log
+qa/dm_*.dll
+qa/dm_*.exe
+qa/*.dll
+qa/*.exe
